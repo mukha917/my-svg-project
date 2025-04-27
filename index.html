@@ -180,6 +180,41 @@
             font-size: 0.9rem;
             color: #94a3b8;
         }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: #1e293b;
+            border-radius: 0.5rem;
+        }
+
+        .speed-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            min-width: 80px;
+        }
+
+        .speed-select {
+            background: #0f172a;
+            color: #fff;
+            border: 1px solid #4f46e5;
+            border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .speed-select:hover {
+            border-color: #818cf8;
+        }
+
+        .speed-select option {
+            background: #1e293b;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -214,6 +249,22 @@
                 <button class="btn" id="rotateRightBtn">Rotate Right</button>
             </div>
 
+            <div class="speed-control">
+                <span class="speed-label">Playback Speed:</span>
+                <select id="speedSelect" class="speed-select">
+                    <option value="0.25">0.25x</option>
+                    <option value="0.5">0.5x</option>
+                    <option value="0.75">0.75x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="1.75">1.75x</option>
+                    <option value="2">2x</option>
+                    <option value="2.5">2.5x</option>
+                    <option value="3">3x</option>
+                </select>
+            </div>
+
             <div class="volume-control">
                 <span id="volumeIcon" style="cursor: pointer;">🔊</span>
                 <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
@@ -245,6 +296,7 @@
         const saveBtn = document.getElementById('saveBtn');
         const trimStartTime = document.getElementById('trimStartTime');
         const trimEndTime = document.getElementById('trimEndTime');
+        const speedSelect = document.getElementById('speedSelect');
 
         let rotation = 0;
         let trimStart = 0;
@@ -285,8 +337,10 @@
             const url = URL.createObjectURL(file);
             videoPlayer.src = url;
             saveBtn.disabled = false;
-            rotation = 180;  // Start at 180 degrees to correct orientation
+            rotation = 180;
             updateVideoRotation();
+            speedSelect.value = "1";
+            videoPlayer.playbackRate = 1;
         }
 
         // Video controls
@@ -389,6 +443,11 @@
                 return;
             }
             alert(`Video trimmed from ${formatTime(trimStart)} to ${formatTime(trimEnd)}`);
+        });
+
+        // Playback speed control
+        speedSelect.addEventListener('change', () => {
+            videoPlayer.playbackRate = parseFloat(speedSelect.value);
         });
 
         // Helper function to format time
