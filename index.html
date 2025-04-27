@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Video Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .upload-zone {
+            border: 2px dashed #4f46e5;
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .upload-zone.drag-over {
+            border-color: #818cf8;
+            background-color: rgba(79, 70, 229, 0.2);
+        }
+
+        .video-container {
+            background-color: #1e293b;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background-color: #0f172a;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transform-origin: center center;
+            transform: rotate(180deg);  /* Initial correction for upside-down video */
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #4338ca;
+        }
+
+        .btn:disabled {
+            background-color: #6b7280;
+            cursor: not-allowed;
+        }
+
+        .timeline {
+            position: relative;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+        }
+
+        .seek-slider {
+            width: 100%;
+            height: 5px;
+            -webkit-appearance: none;
+            background: #4f46e5;
+            border-radius: 2.5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .seek-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .volume-slider {
+            width: 100px;
+            height: 5px;
+            -webkit-appearance: none;
+            background: #4f46e5;
+            border-radius: 2.5px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .time-display {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .trim-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .trim-time {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Modern Video Editor</h1>
+            <p>Upload, trim, and edit your videos with ease</p>
+        </div>
+
+        <div class="upload-zone" id="uploadZone">
+            <input type="file" id="videoInput" accept="video/*" style="display: none;">
+            <button class="btn" onclick="document.getElementById('videoInput').click()">Choose Video</button>
+            <p style="margin-top: 1rem; color: #94a3b8;">or drag and drop your video file here</p>
+        </div>
+
+        <div class="video-container">
+            <div class="video-wrapper">
+                <video id="videoPlayer">
+                    Your browser does not support the video element.
+                </video>
+            </div>
+
+            <div class="timeline">
+                <input type="range" class="seek-slider" id="seekSlider" min="0" max="100" value="0">
+            </div>
+
+            <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
+
+            <div class="controls">
+                <button class="btn" id="playPauseBtn">Play</button>
+                <button class="btn" id="rotateLeftBtn">Rotate Left</button>
+                <button class="btn" id="rotateRightBtn">Rotate Right</button>
+            </div>
+
+            <div class="volume-control">
+                <span id="volumeIcon" style="cursor: pointer;">🔊</span>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+            </div>
+
+            <div class="trim-controls">
+                <button class="btn" id="trimStartBtn">Set Start</button>
+                <span class="trim-time" id="trimStartTime">Start: 00:00</span>
+                <button class="btn" id="trimEndBtn">Set End</button>
+                <span class="trim-time" id="trimEndTime">End: 00:00</span>
+                <button class="btn" id="saveBtn" disabled>Save Trim</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoInput = document.getElementById('videoInput');
+        const uploadZone = document.getElementById('uploadZone');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+        const rotateRightBtn = document.getElementById('rotateRightBtn');
+        const seekSlider = document.getElementById('seekSlider');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeIcon = document.getElementById('volumeIcon');
+        const trimStartBtn = document.getElementById('trimStartBtn');
+        const trimEndBtn = document.getElementById('trimEndBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const trimStartTime = document.getElementById('trimStartTime');
+        const trimEndTime = document.getElementById('trimEndTime');
+
+        let rotation = 0;
+        let trimStart = 0;
+        let trimEnd = 0;
+        let lastVolume = 1;
+
+        // File upload handling
+        videoInput.addEventListener('change', handleFileSelect);
+        uploadZone.addEventListener('dragover', handleDragOver);
+        uploadZone.addEventListener('dragleave', handleDragLeave);
+        uploadZone.addEventListener('drop', handleDrop);
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) loadVideo(file);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('video/')) {
+                loadVideo(file);
+            }
+        }
+
+        function loadVideo(file) {
+            const url = URL.createObjectURL(file);
+            videoPlayer.src = url;
+            saveBtn.disabled = false;
+            rotation = 180;  // Start at 180 degrees to correct orientation
+            updateVideoRotation();
+        }
+
+        // Video controls
+        playPauseBtn.addEventListener('click', togglePlay);
+        videoPlayer.addEventListener('play', updatePlayButton);
+        videoPlayer.addEventListener('pause', updatePlayButton);
+        videoPlayer.addEventListener('timeupdate', updateTimeAndSlider);
+        seekSlider.addEventListener('input', handleSeek);
+
+        // Add this new event listener to ensure proper orientation on load
+        videoPlayer.addEventListener('loadedmetadata', () => {
+            rotation = 180;  // Ensure correct orientation when video loads
+            updateVideoRotation();
+        });
+
+        function togglePlay() {
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+            } else {
+                videoPlayer.pause();
+            }
+        }
+
+        function updatePlayButton() {
+            playPauseBtn.textContent = videoPlayer.paused ? 'Play' : 'Pause';
+        }
+
+        function updateTimeAndSlider() {
+            const percent = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+            seekSlider.value = percent;
+            timeDisplay.textContent = `${formatTime(videoPlayer.currentTime)} / ${formatTime(videoPlayer.duration)}`;
+        }
+
+        function handleSeek() {
+            const time = videoPlayer.duration * (seekSlider.value / 100);
+            videoPlayer.currentTime = time;
+        }
+
+        // Rotation controls
+        rotateLeftBtn.addEventListener('click', () => {
+            rotation = (rotation - 90) % 360;
+            updateVideoRotation();
+        });
+
+        rotateRightBtn.addEventListener('click', () => {
+            rotation = (rotation + 90) % 360;
+            updateVideoRotation();
+        });
+
+        function updateVideoRotation() {
+            videoPlayer.style.transform = `rotate(${rotation}deg)`;
+            if (rotation % 180 !== 0) {
+                videoPlayer.style.width = '100vh';
+                videoPlayer.style.height = '100%';
+            } else {
+                videoPlayer.style.width = '100%';
+                videoPlayer.style.height = '100%';
+            }
+        }
+
+        // Volume controls
+        volumeSlider.addEventListener('input', () => {
+            videoPlayer.volume = volumeSlider.value;
+            updateVolumeIcon();
+        });
+
+        volumeIcon.addEventListener('click', toggleMute);
+
+        function toggleMute() {
+            if (videoPlayer.volume > 0) {
+                lastVolume = videoPlayer.volume;
+                videoPlayer.volume = 0;
+                volumeSlider.value = 0;
+            } else {
+                videoPlayer.volume = lastVolume;
+                volumeSlider.value = lastVolume;
+            }
+            updateVolumeIcon();
+        }
+
+        function updateVolumeIcon() {
+            volumeIcon.textContent = videoPlayer.volume === 0 ? '🔇' : 
+                                   videoPlayer.volume < 0.5 ? '🔉' : '🔊';
+        }
+
+        // Trim controls
+        trimStartBtn.addEventListener('click', () => {
+            trimStart = videoPlayer.currentTime;
+            trimStartTime.textContent = `Start: ${formatTime(trimStart)}`;
+        });
+
+        trimEndBtn.addEventListener('click', () => {
+            trimEnd = videoPlayer.currentTime;
+            trimEndTime.textContent = `End: ${formatTime(trimEnd)}`;
+        });
+
+        saveBtn.addEventListener('click', () => {
+            if (trimStart >= trimEnd) {
+                alert('Invalid trim points. End time must be greater than start time.');
+                return;
+            }
+            alert(`Video trimmed from ${formatTime(trimStart)} to ${formatTime(trimEnd)}`);
+        });
+
+        // Helper function to format time
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            seconds = Math.floor(seconds % 60);
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html> 
